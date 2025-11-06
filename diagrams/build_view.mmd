@@ -1,0 +1,64 @@
+flowchart TB
+  subgraph Compose
+    direction TB
+
+    subgraph nginx_svc["service: nginx"]
+      N1["Dockerfile: requirements/nginx/Dockerfile"]
+      N2["conf: nginx.conf (TLS1.2/1.3, proxy, fastcgi)"]
+      N3["tools: generate-certs.sh (optional)"]
+      P443[["Expose: 443/tcp"]]
+      NET1[["network: inception_net"]]
+      VOL_WP[("mount: wordpress_data:/var/www/html:ro")]
+      ENVN[("env: DOMAIN_NAME")]
+    end
+
+    subgraph wp_svc["service: wordpress"]
+      W1["Dockerfile: requirements/wordpress/Dockerfile"]
+      W2["php-fpm: listen :9000"]
+      W3["tools: entrypoint.sh (wp-config init, salts)"]
+      VOL_WP2[("mount: wordpress_data:/var/www/html")]
+      SECRETS_WP[["secret: db_password"]]
+      ENVW[("env: MYSQL_DATABASE, MYSQL_USER, ...")]
+      NET2[["network: inception_net"]]
+      HWP[["healthcheck: php-fpm ready"]]
+    end
+
+    subgraph db_svc["service: mariadb"]
+      M1["Dockerfile: requirements/mariadb/Dockerfile"]
+      M2["tools: init-db.sh (create db, user)"]
+      VOL_DB[("mount: mariadb_data:/var/lib/mysql")]
+      SECRETS_DB[["secrets: db_root_password, db_password"]]
+      ENVM[("env: MYSQL_DATABASE, MYSQL_USER, ...")]
+      NET3[["network: inception_net"]]
+      HDB[["healthcheck: mysqladmin ping"]]
+    end
+
+    subgraph bonus["bonus services"]
+      R1["redis: cache (no ports)"]
+      A1["adminer: http (proxied by nginx)"]
+      S1["static-site: http (proxied by nginx)"]
+      F1["ftp: optional exposed ports"]
+    end
+
+    Make["Makefile: up/build/down/clean/logs"]
+    ENVFILE[".env"]
+    SECRETS[("./secrets/*")]
+  end
+
+  Make -->|"build & up"| nginx_svc
+  Make -->|"build & up"| wp_svc
+  Make -->|"build & up"| db_svc
+  Make -->|"build & up"| bonus
+
+  ENVFILE --> nginx_svc
+  ENVFILE --> wp_svc
+  ENVFILE --> db_svc
+
+  SECRETS --> wp_svc
+  SECRETS --> db_svc
+
+  nginx_svc -- "FastCGI" --> wp_svc
+  wp_svc -- "SQL" --> db_svc
+  wp_svc -- "cache" --> R1
+  nginx_svc -- "proxy /adminer" --> A1
+  nginx_svc -- "proxy /static"  --> S1

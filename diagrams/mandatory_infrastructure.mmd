@@ -1,0 +1,32 @@
+graph LR
+  subgraph Client
+    B["Browser\nhttps://login.42.fr"]
+  end
+
+  subgraph Host_VM
+    subgraph inception_net
+      N["NGINX\nTLSv1.2/1.3\n:443"]:::ingress
+      W["WordPress + PHP-FPM\n:9000 (internal)"]:::app
+      M["MariaDB\n(internal)"]:::db
+    end
+
+    V1[("Volume: wordpress_data\n/var/www/html")]:::vol
+    V2[("Volume: mariadb_data\n/var/lib/mysql")]:::vol
+
+    S1[["Secret: db_root_password"]]:::sec
+    S2[["Secret: db_password"]]:::sec
+    E[(".env: DOMAIN_NAME,\nMYSQL_DATABASE,\nMYSQL_USER,...")]:::env
+  end
+
+  B -->|"HTTPS 443"| N
+  N -->|"FastCGI"| W
+  W -->|"SQL"| M
+
+  W --- V1
+  M --- V2
+
+  M --- S1
+  W --- S2
+  N --- E
+  W --- E
+  M --- E

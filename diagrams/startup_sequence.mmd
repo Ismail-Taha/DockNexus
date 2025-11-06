@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant User
+    participant NGINX
+    participant WordPress as WP (php-fpm)
+    participant MariaDB as DB
+
+    Note over DB: Container starts
+    DB->>DB: Init scripts (create DB & user)\nHealthcheck: mysqladmin ping OK
+
+    Note over WP: Waits for DB healthy
+    WP->>DB: Connect using MYSQL_USER/PASSWORD
+    WP->>WP: Generate wp-config.php if missing\nLoad salts/keys\nphp-fpm ready (healthcheck)
+
+    Note over NGINX: Waits for WP up
+    User->>NGINX: HTTPS 443 (TLS1.2/1.3)\nGET /
+    NGINX->>WP: FastCGI /index.php
+    WP->>DB: SQL queries
+    DB-->>WP: Rows
+    WP-->>NGINX: Rendered HTML
+    NGINX-->>User: 200 OK (HTTP/2)

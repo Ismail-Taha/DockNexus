@@ -1,0 +1,38 @@
+graph LR
+  subgraph Client
+    B["Browser"]
+  end
+
+  subgraph Host_VM
+    subgraph inception_net
+      N["NGINX (entry) 443\nHTTP/2 + TLSv1.2/1.3"]:::ingress
+      W["WordPress + PHP-FPM"]:::app
+      M["MariaDB"]:::db
+      R["Redis (Object Cache)"]:::cache
+      A["Adminer (DB UI)"]:::admin
+      F["FTP Server"]:::ftp
+      S["Static Site (no PHP)"]:::static
+    end
+
+    V1[("wordpress_data")]:::vol
+    V2[("mariadb_data")]:::vol
+
+    S1[["db_root_password"]]:::sec
+    S2[["db_password"]]:::sec
+    E[(".env")]:::env
+  end
+
+  B -->|"443"| N
+  N -->|"/ -> WP"| W
+  N -->|"/static ->"| S
+  N -->|"/adminer ->"| A
+
+  W -->|"SQL"| M
+  W -->|"Cache"| R
+
+  W --- V1
+  M --- V2
+  M --- S1
+  W --- S2
+
+  F -. "optional ports" .- B
