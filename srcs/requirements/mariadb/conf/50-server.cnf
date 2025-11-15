@@ -1,0 +1,34 @@
+# Ensure client CLI defaults to UTF-8 for consistent connections
+[client]
+# Force utf8mb4 for client tools
+default-character-set = utf8mb4
+
+# Set mysql shell defaults to UTF-8 as well
+[mysql]
+# Force utf8mb4 for interactive shell
+default-character-set = utf8mb4
+
+# Main server configuration
+[mysqld]
+# Run the server as the mysql user inside the container
+user = mysql
+# Track the server PID under the standard run directory
+pid-file = /run/mysqld/mysqld.pid
+# Reuse the shared socket path configured in entrypoint
+socket = /run/mysqld/mysqld.sock
+# Persist data in the mounted volume
+datadir = /var/lib/mysql
+# Allow remote connections from the Docker network
+bind-address = 0.0.0.0
+# Enable TCP networking since bind-address exposes it
+skip-networking = 0
+# Resolve clients by IP only to speed up logins
+skip-name-resolve = 1
+# Serve UTF-8 by default for database content
+character-set-server = utf8mb4
+# Match collation with the UTF-8 charset
+collation-server = utf8mb4_unicode_ci
+# Cap simultaneous connections to avoid resource exhaustion
+max_connections = 100
+# Store InnoDB tables independently for easier maintenance
+innodb_file_per_table = 1

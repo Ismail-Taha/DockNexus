@@ -9,7 +9,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - wordpress_data:/var/www/html:ro
+      - /home/izma/isallali/data/wordpress:/var/www/html:ro
     networks:
       - inception_net
 
@@ -21,7 +21,7 @@ services:
     depends_on:
       - mariadb
     volumes:
-      - wordpress_data:/var/www/html
+      - /home/izma/isallali/data/wordpress:/var/www/html
     networks:
       - inception_net
 
@@ -31,23 +31,9 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - /home/izma/isallali/data/mariadb:/var/lib/mysql
     networks:
       - inception_net
-
-volumes:
-  wordpress_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/isallali/data/wordpress
-  mariadb_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/isallali/data/mariadb
 
 networks:
   inception_net:
