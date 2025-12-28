@@ -6,10 +6,19 @@ services:
     container_name: nginx
     restart: unless-stopped
     env_file: .env
+    depends_on:
+      wordpress:
+        condition: service_healthy
     ports:
       - "443:443"
     volumes:
       - /home/izma/isallali/data/wordpress:/var/www/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -kfsS https://localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - inception_net
 
@@ -18,10 +27,23 @@ services:
     container_name: wordpress
     restart: unless-stopped
     env_file: .env
+    environment:
+      WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
+      WP_USER2_PASSWORD_FILE: /run/secrets/wp_user2_password
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     volumes:
       - /home/izma/isallali/data/wordpress:/var/www/html
+    healthcheck:
+      test: ["CMD-SHELL", "wp core is-installed --allow-root --path=/var/www/html"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    secrets:
+      - wp_admin_password
+      - wp_user2_password
     networks:
       - inception_net
 
@@ -32,9 +54,21 @@ services:
     env_file: .env
     volumes:
       - /home/izma/isallali/data/mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - inception_net
 
 networks:
   inception_net:
     driver: bridge
+
+secrets:
+  wp_admin_password:
+    file: ./secrets/credentials.txt
+  wp_user2_password:
+    file: ./secrets/wp_user2_password

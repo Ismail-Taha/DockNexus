@@ -28,13 +28,17 @@ RUN wget https://wordpress.org/latest.tar.gz \
  && mv wordpress/* . \
  && rm -rf wordpress
 
-# Copy your manual wp-config.php
+# Copy your manual wp-config.php (keep a template for volume population)
 COPY conf/wp-config.php /var/www/html/wp-config.php
+COPY conf/wp-config.php /usr/src/wp-config.php
 
 # Install WP-CLI
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
  && chmod +x wp-cli.phar \
  && mv wp-cli.phar /usr/local/bin/wp
+
+# Keep a pristine copy of WordPress to re-seed bind-mounted volumes
+RUN cp -a /var/www/html /usr/src/wordpress
 
 # Prepare PHP-FPM
 RUN mkdir -p /run/php \
