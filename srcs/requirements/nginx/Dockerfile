@@ -8,9 +8,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY conf/nginx.conf /etc/nginx/nginx.conf
-COPY tools/ /usr/local/bin/
+COPY tools/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/*.sh
+RUN chmod +x /usr/local/bin/nginx-entrypoint.sh
 
 EXPOSE 443
 
