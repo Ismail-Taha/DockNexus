@@ -131,14 +131,14 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/izma/isallali/data/mariadb
+      device: ${HOME}/data/mariadb
       o: bind
   wordpress_data:
     name: wordpress
     driver: local
     driver_opts:
       type: none
-      device: /home/izma/isallali/data/wordpress
+      device: ${HOME}/data/wordpress
       o: bind
 
 secrets:
