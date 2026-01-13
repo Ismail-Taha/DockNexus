@@ -7,7 +7,7 @@ RUN apt-get update \
         openssl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY conf/nginx.conf /etc/nginx/nginx.conf
+COPY conf/nginx.conf /etc/nginx/conf.d/default.conf
 COPY tools/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/nginx-entrypoint.sh

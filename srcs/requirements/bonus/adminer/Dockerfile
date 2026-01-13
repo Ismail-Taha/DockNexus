@@ -6,6 +6,6 @@ RUN apk add --no-cache php82 php82-session php82-pdo_mysql curl \
 
 WORKDIR /var/www/html
 
-EXPOSE 8080
+EXPOSE 8082
 
-ENTRYPOINT ["php", "-S", "0.0.0.0:8080"]
+ENTRYPOINT ["php", "-S", "0.0.0.0:8082"]

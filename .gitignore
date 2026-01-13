@@ -3,4 +3,3 @@ secrets/*
 srcs/.env
 *.pyc
 __pycache__/
-/srcs/requirements/wordpress/conf/wp-config.php

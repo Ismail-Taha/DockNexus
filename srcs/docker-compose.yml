@@ -22,7 +22,7 @@ services:
 
   adminer:
     container_name: adminer
-    build: ./requirements/adminer
+    build: ./requirements/bonus/adminer
     image: adminer
     restart: always
     networks:
@@ -32,7 +32,7 @@ services:
 
   static:
     container_name: static
-    build: ./requirements/static
+    build: ./requirements/bonus/static
     image: static
     restart: always
     networks:
@@ -42,7 +42,7 @@ services:
 
   ftp:
     container_name: ftp
-    build: ./requirements/ftp
+    build: ./requirements/bonus/ftp
     image: ftp
     restart: always
     environment:
@@ -61,7 +61,7 @@ services:
 
   redis:
     container_name: redis
-    build: ./requirements/redis
+    build: ./requirements/bonus/redis
     image: redis
     restart: always
     networks:
@@ -71,19 +71,20 @@ services:
 
   cadvisor:
     container_name: cadvisor
-    build: ./requirements/cadvisor
+    build: ./requirements/bonus/cadvisor
     image: cadvisor
     restart: always
     privileged: true
     volumes:
-      - /:/rootfs:ro
+      - /:/rootfs:rw
       - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
-      - /dev/disk:/dev/disk:ro
+      - /sys:/sys:rw
+      - /var/lib/docker:/var/lib/docker:rw
+      - /dev/disk:/dev/disk:rw
     networks:
       - inception
-
+    ports:
+      - "8080:8080"
   wordpress:
     container_name: wordpress
     build: ./requirements/wordpress
