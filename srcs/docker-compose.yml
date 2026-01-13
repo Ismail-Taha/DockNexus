@@ -18,7 +18,7 @@ services:
       - wordpress
       - adminer
       - static
-      - portainer
+      - cadvisor
 
   adminer:
     container_name: adminer
@@ -29,8 +29,6 @@ services:
       - inception
     env_file:
       - .env
-    expose:
-      - "8080"
 
   static:
     container_name: static
@@ -41,8 +39,6 @@ services:
       - inception
     env_file:
       - .env
-    expose:
-      - "8081"
 
   ftp:
     container_name: ftp
@@ -72,24 +68,21 @@ services:
       - inception
     env_file:
       - .env
-    expose:
-      - "6379"
 
-  portainer:
-    container_name: portainer
-    build: ./requirements/portainer
-    image: portainer
+  cadvisor:
+    container_name: cadvisor
+    build: ./requirements/cadvisor
+    image: cadvisor
     restart: always
+    privileged: true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      DOCKER_API_VERSION: "1.44"
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
     networks:
       - inception
-    env_file:
-      - .env
-    expose:
-      - "9001"
 
   wordpress:
     container_name: wordpress
@@ -111,8 +104,6 @@ services:
       - .env
     depends_on:
       - mariadb
-    expose:
-      - "9000"
 
   mariadb:
     container_name: mariadb
@@ -128,8 +119,6 @@ services:
       - inception
     env_file:
       - .env
-    expose:
-      - "3306"
 
 networks:
   inception:
