@@ -1,35 +1,80 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 DATA_DIR="/var/lib/mysql"
+SOCKET="/run/mysqld/mysqld.sock"
 
+# Read secrets (single source of truth)
+DB_PASSWORD="$(cat /run/secrets/db_password)"
+DB_ROOT_PASSWORD="$(cat /run/secrets/db_root_password)"
+
+# Force clients to use the local socket even if MYSQL_HOST is set
+mysql_sock() {
+    MYSQL_HOST= MYSQL_TCP_PORT= mariadb --protocol=socket --socket="$SOCKET" "$@"
+}
+
+mysqladmin_sock() {
+    MYSQL_HOST= MYSQL_TCP_PORT= mariadb-admin --protocol=socket --socket="$SOCKET" "$@"
+}
+
+echo "Starting MariaDB..."
+
+# Prepare runtime directories
 mkdir -p /run/mysqld
 chown -R mysql:mysql /run/mysqld
 chown -R mysql:mysql "$DATA_DIR"
 
-# Initialize MariaDB data directory and seed default database/user on first run
+# First-time initialization only
 if [ ! -d "$DATA_DIR/mysql" ]; then
-    mariadb-install-db --user=mysql --ldata="$DATA_DIR"
+    echo "Initializing MariaDB data directory..."
+    mariadb-install-db --user=mysql --datadir="$DATA_DIR"
 
-    mysqld --user=mysql --skip-networking --socket=/run/mysqld/mysqld.sock &
+    echo "Starting temporary MariaDB server..."
+    mysqld --user=mysql --skip-networking --socket="$SOCKET" &
     pid="$!"
 
-    until mariadb-admin ping --silent; do
+    echo "Waiting for MariaDB to be ready..."
+    until mysqladmin_sock ping --silent; do
         sleep 1
     done
 
-    mysql <<SQL
--- Secure root account if password provided
-$( [ -n "${MYSQL_ROOT_PASSWORD:-}" ] && echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" )
-$( [ -n "${MYSQL_ROOT_PASSWORD:-}" ] && echo "ALTER USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" )
-CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+    echo "Configuring database and users..."
+    mysql_sock -uroot <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
 FLUSH PRIVILEGES;
-SQL
+EOF
 
-    mysqladmin shutdown
+    echo "Shutting down temporary MariaDB server..."
+    mysqladmin_sock -uroot -p"${DB_ROOT_PASSWORD}" shutdown
+    wait "$pid"
+else
+    echo "Starting temporary MariaDB server to refresh user credentials..."
+    mysqld --user=mysql --skip-networking --socket="$SOCKET" &
+    pid="$!"
+
+    echo "Waiting for MariaDB to be ready..."
+    until mysqladmin_sock ping --silent; do
+        sleep 1
+    done
+
+    echo "Updating application user password from secret..."
+    if ! mysql_sock -uroot -p"${DB_ROOT_PASSWORD}" <<EOF
+ALTER USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+FLUSH PRIVILEGES;
+EOF
+    then
+        echo "Failed to update user password. Check that secrets/db_root_password.txt matches the DB root password, or reset the data volume." >&2
+        mysqladmin_sock -uroot -p"${DB_ROOT_PASSWORD}" shutdown || true
+        exit 1
+    fi
+
+    echo "Shutting down temporary MariaDB server..."
+    mysqladmin_sock -uroot -p"${DB_ROOT_PASSWORD}" shutdown
     wait "$pid"
 fi
 
-exec mysqld --user=mysql --datadir="$DATA_DIR" --bind-address=0.0.0.0
+echo "Starting MariaDB in foreground..."
+exec mysqld --user=mysql --datadir="$DATA_DIR"

@@ -1,0 +1,8 @@
+[mysqld]
+# Allow remote connections from the Docker network
+bind-address = 0.0.0.0
+port = 3306
+# Persist data in the mounted volume
+datadir = /var/lib/mysql
+# reuse the shared socket path configured in entrypoint
+socket = /run/mysqld/mysqld.sock

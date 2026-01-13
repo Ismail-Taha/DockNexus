@@ -1,77 +1,157 @@
+name: inception
+
 services:
   nginx:
-    build: ./requirements/nginx
     container_name: nginx
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      wordpress:
-        condition: service_healthy
+    build: ./requirements/nginx
+    image: nginx
+    restart: always
     ports:
-      - "80:80"
       - "443:443"
     volumes:
-      - /home/izma/isallali/data/wordpress:/var/www/html:ro
-    healthcheck:
-      test: ["CMD-SHELL", "curl -kfsS https://localhost || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - wordpress_data:/var/www/html:ro
     networks:
-      - inception_net
+      - inception
+    env_file:
+      - .env
+    depends_on:
+      - wordpress
+
+  adminer:
+    container_name: adminer
+    build: ./requirements/adminer
+    image: adminer
+    restart: always
+    networks:
+      - inception
+    env_file:
+      - .env
+    expose:
+      - "8080"
+
+  static:
+    container_name: static
+    build: ./requirements/static
+    image: static
+    restart: always
+    networks:
+      - inception
+    env_file:
+      - .env
+    expose:
+      - "80"
+
+  ftp:
+    container_name: ftp
+    build: ./requirements/ftp
+    image: ftp
+    restart: always
+    environment:
+      FTP_USER: ${FTP_USER:-wpftp}
+      FTP_PASSWORD: ${FTP_PASSWORD:-changeme}
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+    env_file:
+      - .env
+    depends_on:
+      - wordpress
+    ports:
+      - "21:21"
+
+  redis:
+    container_name: redis
+    build: ./requirements/redis
+    image: redis
+    restart: always
+    networks:
+      - inception
+    env_file:
+      - .env
+    expose:
+      - "6379"
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - inception
+    env_file:
+      - .env
+    expose:
+      - "9001"
 
   wordpress:
-    build: ./requirements/wordpress
     container_name: wordpress
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "9000:9000"
+    build: ./requirements/wordpress
+    image: wordpress
+    restart: always
     environment:
       WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
       WP_USER2_PASSWORD_FILE: /run/secrets/wp_user2_password
-    depends_on:
-      mariadb:
-        condition: service_healthy
     volumes:
-      - /home/izma/isallali/data/wordpress:/var/www/html
-    healthcheck:
-      test: ["CMD-SHELL", "wp core is-installed --allow-root --path=/var/www/html"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
+      - wordpress_data:/var/www/html
     secrets:
       - wp_admin_password
       - wp_user2_password
+      - db_password
     networks:
-      - inception_net
+      - inception
+    env_file:
+      - .env
+    depends_on:
+      - mariadb
+    expose:
+      - "9000"
 
   mariadb:
-    build: ./requirements/mariadb
     container_name: mariadb
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "3306:3306"
+    build: ./requirements/mariadb
+    image: mariadb
+    restart: always
     volumes:
-      - /home/izma/isallali/data/mariadb:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - mariadb_data:/var/lib/mysql
+    secrets:
+      - db_password
+      - db_root_password
     networks:
-      - inception_net
+      - inception
+    env_file:
+      - .env
+    expose:
+      - "3306"
 
 networks:
-  inception_net:
+  inception:
+    name: inception
     driver: bridge
+
+volumes:
+  mariadb_data:
+    name: mariadb
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/izma/isallali/data/mariadb
+      o: bind
+  wordpress_data:
+    name: wordpress
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/izma/isallali/data/wordpress
+      o: bind
 
 secrets:
   wp_admin_password:
-    file: ./secrets/credentials.txt
+    file: ../secrets/wp_admin_password.txt
   wp_user2_password:
-    file: ./secrets/wp_user2_password
+    file: ../secrets/wp_user2_password
+  db_password:
+    file: ../secrets/db_password.txt
+  db_root_password:
+    file: ../secrets/db_root_password.txt

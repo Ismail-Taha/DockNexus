@@ -5,7 +5,7 @@ MARIADB_DATA_DIR := /home/izma/isallali/data/mariadb
 .PHONY: up down build clean ps logs ensure-dirs
 
 up: ensure-dirs ## Build and start the stack in detached mode
-	docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d --build
 
 ensure-dirs:
 	mkdir -p $(WORDPRESS_DATA_DIR) $(MARIADB_DATA_DIR)

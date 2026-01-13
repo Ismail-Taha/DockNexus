@@ -1,64 +1,55 @@
 #!/bin/bash
-set -eu
+set -e
 
-# Waiting for MariaDB to be ready
-until mysqladmin ping -h"$MYSQL_HOST" --silent; do
-  echo "Waiting for MariaDB..."
-  sleep 3
+WP_PATH="/var/www/html"
+
+mkdir -p "$WP_PATH"
+cd "$WP_PATH"
+
+if ! command -v wp >/dev/null 2>&1; then
+  curl -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+  chmod +x /tmp/wp-cli.phar
+  mv /tmp/wp-cli.phar /usr/local/bin/wp
+fi
+
+if [ ! -f "$WP_PATH/wp-includes/version.php" ]; then
+  wp core download --allow-root
+fi
+
+if [ ! -f "$WP_PATH/wp-config.php" ] && [ -f /usr/src/wp-config.php ]; then
+  cp /usr/src/wp-config.php "$WP_PATH/wp-config.php"
+fi
+
+echo "Waiting for MariaDB..."
+until mysql -h"$MYSQL_HOST" -u"$MYSQL_USER" -p"$(cat /run/secrets/db_password)" -e "SELECT 1;" >/dev/null 2>&1; do
+  echo "MariaDB is not ready yet..."
+  sleep 2
 done
+echo "MariaDB is ready."
 
-# Populate WordPress files into the bind mount if empty
-if [ ! -f /var/www/html/wp-includes/version.php ]; then
-  echo "Seeding WordPress files into /var/www/html..."
-  cp -a /usr/src/wordpress/. /var/www/html
-fi
-
-# Ensure wp-config.php exists (for fresh mounts)
-if [ ! -f /var/www/html/wp-config.php ] && [ -f /usr/src/wp-config.php ]; then
-  cp /usr/src/wp-config.php /var/www/html/wp-config.php
-fi
-
-load_secret_or_env() {
-  file_var="$1"
-  env_var="$2"
-  default_path="$3"
-
-  # Prefer FILE env var, then env var, then default file path
-  if [ -n "${!file_var:-}" ] && [ -f "${!file_var}" ]; then
-    cat "${!file_var}"
-  elif [ -n "${!env_var:-}" ]; then
-    printf '%s' "${!env_var}"
-  elif [ -f "$default_path" ]; then
-    cat "$default_path"
-  else
-    echo "Missing credentials: set $file_var, $env_var, or provide $default_path" >&2
-    exit 1
-  fi
-}
-
-ADMIN_PASSWORD="$(load_secret_or_env WP_ADMIN_PASSWORD_FILE WP_ADMIN_PASSWORD /run/secrets/wp_admin_password)"
-USER2_PASSWORD="$(load_secret_or_env WP_USER2_PASSWORD_FILE WP_USER2_PASSWORD /run/secrets/wp_user2_password)"
-
-# If WordPress is not installed, install it
-if ! wp core is-installed --allow-root --path=/var/www/html; then
-
-  # Install WordPress core using existing wp-config.php
+if ! wp core is-installed --allow-root --path="$WP_PATH"; then
   wp core install \
     --url="https://${DOMAIN_NAME}" \
     --title="Inception Site" \
-    --admin_user="${WP_ADMIN_USER}" \
-    --admin_password="${ADMIN_PASSWORD}" \
-    --admin_email="${WP_ADMIN_EMAIL}" \
+    --admin_user="$WP_ADMIN_USER" \
+    --admin_password="$(cat /run/secrets/wp_admin_password)" \
+    --admin_email="$WP_ADMIN_EMAIL" \
     --skip-email \
     --allow-root \
-    --path=/var/www/html
+    --path="$WP_PATH"
 
-  # Create second non-admin user
-  wp user create "${WP_USER2}" "${WP_USER2_EMAIL}" \
+  wp user create \
+    "$WP_USER2" "$WP_USER2_EMAIL" \
+    --user_pass="$(cat /run/secrets/wp_user2_password)" \
     --role=subscriber \
-    --user_pass="${USER2_PASSWORD}" \
     --allow-root \
-    --path=/var/www/html
+    --path="$WP_PATH"
 fi
 
+if [ -n "${REDIS_HOST:-}" ]; then
+  wp plugin install redis-cache --activate --allow-root --path="$WP_PATH" || true
+  wp redis enable --allow-root --path="$WP_PATH" || true
+fi
+
+mkdir -p /run/php
 exec php-fpm8.2 -F
