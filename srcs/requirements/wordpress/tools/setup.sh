@@ -3,6 +3,29 @@ set -e
 
 WP_PATH="/var/www/html"
 
+read_secret_or_env() {
+  secret_path="$1"
+  env_var_name="$2"
+
+  if [ -f "$secret_path" ]; then
+    cat "$secret_path"
+    return 0
+  fi
+
+  if [ -n "${!env_var_name:-}" ]; then
+    echo "Warning: ${secret_path} missing, using ${env_var_name} env var instead." >&2
+    printf '%s' "${!env_var_name}"
+    return 0
+  fi
+
+  echo "Error: ${secret_path} missing and ${env_var_name} is not set." >&2
+  exit 1
+}
+
+DB_PASSWORD="$(read_secret_or_env /run/secrets/db_password MYSQL_PASSWORD)"
+WP_ADMIN_PASSWORD_VALUE="$(read_secret_or_env /run/secrets/wp_admin_password WP_ADMIN_PASSWORD)"
+WP_USER2_PASSWORD_VALUE="$(read_secret_or_env /run/secrets/wp_user2_password WP_USER2_PASSWORD)"
+
 mkdir -p "$WP_PATH"
 cd "$WP_PATH"
 
@@ -21,7 +44,7 @@ if [ ! -f "$WP_PATH/wp-config.php" ] && [ -f /usr/src/wp-config.php ]; then
 fi
 
 echo "Waiting for MariaDB..."
-until mysql -h"$MYSQL_HOST" -u"$MYSQL_USER" -p"$(cat /run/secrets/db_password)" -e "SELECT 1;" >/dev/null 2>&1; do
+until mysql -h"$MYSQL_HOST" -u"$MYSQL_USER" -p"$DB_PASSWORD" -e "SELECT 1;" >/dev/null 2>&1; do
   echo "MariaDB is not ready yet..."
   sleep 2
 done
@@ -32,7 +55,7 @@ if ! wp core is-installed --allow-root --path="$WP_PATH"; then
     --url="https://${DOMAIN_NAME}" \
     --title="Inception Site" \
     --admin_user="$WP_ADMIN_USER" \
-    --admin_password="$(cat /run/secrets/wp_admin_password)" \
+    --admin_password="$WP_ADMIN_PASSWORD_VALUE" \
     --admin_email="$WP_ADMIN_EMAIL" \
     --skip-email \
     --allow-root \
@@ -40,7 +63,7 @@ if ! wp core is-installed --allow-root --path="$WP_PATH"; then
 
   wp user create \
     "$WP_USER2" "$WP_USER2_EMAIL" \
-    --user_pass="$(cat /run/secrets/wp_user2_password)" \
+    --user_pass="$WP_USER2_PASSWORD_VALUE" \
     --role=subscriber \
     --allow-root \
     --path="$WP_PATH"

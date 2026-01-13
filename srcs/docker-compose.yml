@@ -16,6 +16,9 @@ services:
       - .env
     depends_on:
       - wordpress
+      - adminer
+      - static
+      - portainer
 
   adminer:
     container_name: adminer
@@ -39,7 +42,7 @@ services:
     env_file:
       - .env
     expose:
-      - "80"
+      - "8081"
 
   ftp:
     container_name: ftp
@@ -74,10 +77,13 @@ services:
 
   portainer:
     container_name: portainer
-    image: portainer/portainer-ce:latest
+    build: ./requirements/portainer
+    image: portainer
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DOCKER_API_VERSION: "1.44"
     networks:
       - inception
     env_file:

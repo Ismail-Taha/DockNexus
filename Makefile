@@ -2,7 +2,7 @@ COMPOSE_FILE := srcs/docker-compose.yml
 WORDPRESS_DATA_DIR := /home/izma/isallali/data/wordpress
 MARIADB_DATA_DIR := /home/izma/isallali/data/mariadb
 
-.PHONY: up down build clean ps logs ensure-dirs
+.PHONY: up down build clean reset ps logs ensure-dirs
 
 up: ensure-dirs ## Build and start the stack in detached mode
 	docker compose -f $(COMPOSE_FILE) up -d --build
@@ -18,6 +18,10 @@ build: ## Rebuild images without using cache
 
 clean: ## Remove containers, networks, and named volumes
 	docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans
+
+reset: clean ## Full reset (wipe bind-mounted data)
+	rm -rf $(WORDPRESS_DATA_DIR) $(MARIADB_DATA_DIR)
+	mkdir -p $(WORDPRESS_DATA_DIR) $(MARIADB_DATA_DIR)
 
 ps: ## List running services
 	docker compose -f $(COMPOSE_FILE) ps

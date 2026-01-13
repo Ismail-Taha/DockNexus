@@ -4,9 +4,27 @@ set -eu
 DATA_DIR="/var/lib/mysql"
 SOCKET="/run/mysqld/mysqld.sock"
 
-# Read secrets (single source of truth)
-DB_PASSWORD="$(cat /run/secrets/db_password)"
-DB_ROOT_PASSWORD="$(cat /run/secrets/db_root_password)"
+read_secret_or_env() {
+    secret_path="$1"
+    env_var_name="$2"
+
+    if [ -f "$secret_path" ]; then
+        cat "$secret_path"
+        return 0
+    fi
+
+    if [ -n "${!env_var_name:-}" ]; then
+        echo "Warning: ${secret_path} missing, using ${env_var_name} env var instead." >&2
+        printf '%s' "${!env_var_name}"
+        return 0
+    fi
+
+    echo "Error: ${secret_path} missing and ${env_var_name} is not set." >&2
+    exit 1
+}
+
+DB_PASSWORD="$(read_secret_or_env /run/secrets/db_password MYSQL_PASSWORD)"
+DB_ROOT_PASSWORD="$(read_secret_or_env /run/secrets/db_root_password MYSQL_ROOT_PASSWORD)"
 
 # Force clients to use the local socket even if MYSQL_HOST is set
 mysql_sock() {
@@ -60,9 +78,12 @@ else
         sleep 1
     done
 
-    echo "Updating application user password from secret..."
+    echo "Ensuring database and user exist..."
     if ! mysql_sock -uroot -p"${DB_ROOT_PASSWORD}" <<EOF
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 ALTER USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
 FLUSH PRIVILEGES;
 EOF
     then
