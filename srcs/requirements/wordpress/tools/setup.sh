@@ -74,5 +74,10 @@ if [ -n "${REDIS_HOST:-}" ]; then
   wp redis enable --allow-root --path="$WP_PATH" || true
 fi
 
+# Fix permissions so PHP-FPM can write to wp-content
+find "$WP_PATH" -type f -exec chmod 644 {} \;
+find "$WP_PATH" -type d -exec chmod 755 {} \;
+chown -R www-data:www-data "$WP_PATH"
+
 mkdir -p /run/php
 exec php-fpm8.2 -F
