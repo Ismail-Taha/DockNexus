@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-RUN apt-get update \
+RUN apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false \
     && apt-get install -y ca-certificates wget build-essential \
     && rm -rf /var/lib/apt/lists/*
 

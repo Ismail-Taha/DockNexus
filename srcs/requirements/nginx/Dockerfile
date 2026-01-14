@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-RUN apt-get update \
+RUN apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false \
     && apt-get install -y --no-install-recommends \
         nginx \
         curl \

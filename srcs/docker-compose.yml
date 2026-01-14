@@ -64,6 +64,8 @@ services:
     build: ./requirements/bonus/redis
     image: redis
     restart: always
+    volumes:
+      - redis_data:/data
     networks:
       - inception
     env_file:
@@ -83,8 +85,6 @@ services:
       - /dev/disk:/dev/disk:rw
     networks:
       - inception
-    ports:
-      - "8080:8080"
   wordpress:
     container_name: wordpress
     build: ./requirements/wordpress
@@ -140,6 +140,13 @@ volumes:
     driver_opts:
       type: none
       device: ${HOME}/data/wordpress
+      o: bind
+  redis_data:
+    name: redis
+    driver: local
+    driver_opts:
+      type: none
+      device: ${HOME}/data/redis
       o: bind
 
 secrets:
