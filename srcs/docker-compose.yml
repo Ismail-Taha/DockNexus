@@ -64,8 +64,6 @@ services:
     build: ./requirements/bonus/redis
     image: redis
     restart: always
-    volumes:
-      - redis_data:/data
     networks:
       - inception
     env_file:

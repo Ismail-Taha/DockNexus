@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-RUN apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false \
+RUN apt-get update \
     && apt-get install -y ca-certificates wget build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -12,4 +12,4 @@ COPY --chmod=755 ./tools/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8000
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

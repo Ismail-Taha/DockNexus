@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-RUN apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         mariadb-server \
         mariadb-client \
