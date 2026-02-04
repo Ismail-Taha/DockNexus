@@ -2,10 +2,6 @@
 define('DB_NAME', getenv('MYSQL_DATABASE'));
 define('DB_USER', getenv('MYSQL_USER'));
 
-/**
- * Read DB password from Docker secret (recommended).
- * Make sure docker-compose mounts the secret as /run/secrets/db_password
- */
 define('DB_PASSWORD', getenv('MYSQL_PASSWORD'));
 
 define('DB_HOST', 'mariadb:3306');

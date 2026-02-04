@@ -1,63 +1,43 @@
-# Inception Project — Architecture Diagrams
+*This project has been created as part of the 42 curriculum by isallali.*
 
-> 🛠 For best experience, use the VS Code extension: **[Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=vstirbu.vscode-mermaid-preview)**
+# Inception
 
-This `README.md` includes all diagrams for the Inception project rendered using Mermaid. Click to view/edit in the MermaidChart editor or preview locally with proper VS Code support.
+**Description**
+This project builds a small infrastructure using Docker Compose inside a VM. It includes an NGINX reverse proxy with TLS 1.2/1.3, WordPress with PHP-FPM, and MariaDB, plus named volumes for persistent data and a dedicated Docker network. Bonus services include Redis cache, FTP access to the WordPress volume, Adminer, a static site, and cAdvisor.
 
----
+**Instructions**
+1. Configure your domain to point to the VM IP (example: add `isallali.42.fr` in `/etc/hosts`).
+2. Create `.env` at `srcs/.env` and secrets in `secrets/` (see `DEV_DOC.md`).
+3. Start the stack with `make up`.
+4. Access the site at `https://<DOMAIN_NAME>`.
+5. Stop the stack with `make down`.
 
-## 🧩 1. Mandatory Infrastructure
+**Project Description**
+This repository contains Dockerfiles, configuration files, and entrypoint scripts for each service, all built locally without pulling prebuilt images (except the base Alpine/Debian layers). Containers are connected via a dedicated network named `inception`. Data persistence is provided through named volumes mapped to `/home/<login>/data` on the host, following the subject requirements. The project sources included are the Dockerfiles, service configs, shell scripts, and diagrams under `diagrams/`.
 
-![Mandatory Infrastructure](https://supabase.mermaidchart.com/storage/v1/object/public/chatgpt-diagrams/2025-11-06/edd50326-b6e3-43dc-a3ff-4c7c21ce7965.png)
+**Comparison: Virtual Machines vs Docker**
+Docker containers share the host kernel and start quickly, which is ideal for lightweight service isolation. Virtual machines virtualize entire operating systems and are heavier, but provide stronger isolation. This project uses Docker for efficiency and to focus on service orchestration.
 
-➡️ [Edit Diagram](https://www.mermaidchart.com/app/mermaid-chart-save/2025-11-06/edd50326-b6e3-43dc-a3ff-4c7c21ce7965) | [View Mermaid Source](./diagrams/mandatory_infrastructure.mmd)
+**Comparison: Secrets vs Environment Variables**
+Environment variables are easy to inject but can leak via process inspection or logs. Docker secrets are mounted as files and reduce exposure. This project uses secrets for database credentials and env vars for non-sensitive configuration.
 
----
+**Comparison: Docker Network vs Host Network**
+A Docker network provides isolated service-to-service communication without exposing internal ports on the host. Host networking removes isolation and is forbidden by the subject. This project uses a dedicated bridge network.
 
-## 🚀 2. Full Infrastructure (Mandatory + Bonus)
+**Comparison: Docker Volumes vs Bind Mounts**
+Bind mounts map arbitrary host paths directly into containers, which can be flexible but less portable. Named volumes are managed by Docker and are more predictable. This project uses named volumes mapped to `/home/<login>/data` as required.
 
-![Full Infrastructure](https://supabase.mermaidchart.com/storage/v1/object/public/chatgpt-diagrams/2025-11-06/85cf5e1c-66c3-42bc-84e5-999e23b810b1.png)
+**Resources**
+- Docker Compose documentation
+- NGINX TLS configuration docs
+- WordPress and WP-CLI documentation
+- MariaDB documentation
+- Redis documentation
+- vsftpd documentation
+- Adminer documentation
+- cAdvisor documentation
 
-➡️ [Edit Diagram](https://www.mermaidchart.com/app/mermaid-chart-save/2025-11-06/85cf5e1c-66c3-42bc-84e5-999e23b810b1) | [View Mermaid Source](./diagrams/full_infrastructure.mmd)
+AI usage: AI assistance was used to draft documentation and refactor shell scripts, and all outputs were reviewed, adapted, and tested manually.
 
----
-
-## 🧱 3. Detailed Build View
-
-![Detailed Build View](https://supabase.mermaidchart.com/storage/v1/object/public/chatgpt-diagrams/2025-11-06/9c4fb4d3-4437-471e-b8c9-a806d926316f.png)
-
-➡️ [Edit Diagram](https://www.mermaidchart.com/app/mermaid-chart-save/2025-11-06/9c4fb4d3-4437-471e-b8c9-a806d926316f) | [View Mermaid Source](./diagrams/build_view.mmd)
-
----
-
-## ⚙️ 4. Startup & Communication Sequence
-
-![Startup & Communication](https://supabase.mermaidchart.com/storage/v1/object/public/chatgpt-diagrams/2025-11-06/7d2d807b-0c5c-44c6-87f7-32e04ee0d59e.png)
-
-➡️ [Edit Diagram](https://www.mermaidchart.com/app/mermaid-chart-save/2025-11-06/7d2d807b-0c5c-44c6-87f7-32e04ee0d59e) | [View Mermaid Source](./diagrams/startup_sequence.mmd)
-
----
-
-### 📂 Folder Structure (recommended)
-
-```
-.
-├── README.md                  # This file
-└── diagrams/
-    ├── mandatory_infrastructure.mmd
-    ├── full_infrastructure.mmd
-    ├── build_view.mmd
-    └── startup_sequence.mmd
-```
-
-Each `.mmd` file contains the raw Mermaid code for each diagram.
-
----
-
-### ✅ Tips
-
-* Use [vscode-mermaid-preview](https://marketplace.visualstudio.com/items?itemName=vstirbu.vscode-mermaid-preview) for local rendering
-* You can render `.mmd` files directly in GitHub with Mermaid support enabled (in the future)
-* Use MermaidChart to collaborate or generate PNGs/SVGs
-
-Let me know if you'd like me to generate those `.mmd` files for you next!
+**Diagrams**
+Architecture diagrams are stored in `diagrams/`. The subject PDF is at `diagrams/incep.pdf`.

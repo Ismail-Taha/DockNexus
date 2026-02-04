@@ -58,6 +58,7 @@ services:
       - wordpress
     ports:
       - "21:21"
+      - "21000-21010:21000-21010"
 
   redis:
     container_name: redis
@@ -88,14 +89,9 @@ services:
     build: ./requirements/wordpress
     image: wordpress
     restart: always
-    environment:
-      WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
-      WP_USER2_PASSWORD_FILE: /run/secrets/wp_user2_password
     volumes:
       - wordpress_data:/var/www/html
     secrets:
-      - wp_admin_password
-      - wp_user2_password
       - db_password
     networks:
       - inception
@@ -148,10 +144,6 @@ volumes:
       o: bind
 
 secrets:
-  wp_admin_password:
-    file: ../secrets/wp_admin_password.txt
-  wp_user2_password:
-    file: ../secrets/wp_user2_password
   db_password:
     file: ../secrets/db_password.txt
   db_root_password:
