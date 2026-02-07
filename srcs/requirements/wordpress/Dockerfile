@@ -3,8 +3,6 @@ FROM debian:bookworm
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
-    wget \
-    tar \
     mariadb-client \
     php-fpm \
     php-mysql \
@@ -24,13 +22,6 @@ RUN sed -i 's|listen = /run/php/php8.2-fpm.sock|listen = 9000|' /etc/php/8.2/fpm
  && mkdir -p /run/php
 
 WORKDIR /var/www/html
-
-# Install WordPress core at build time
-RUN wget https://wordpress.org/latest.tar.gz \
- && tar -xzf latest.tar.gz \
- && rm latest.tar.gz \
- && mv wordpress/* . \
- && rm -rf wordpress
 
 # Install WP-CLI at build time
 RUN curl -fsSL -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \

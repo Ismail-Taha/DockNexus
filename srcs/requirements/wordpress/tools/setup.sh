@@ -12,17 +12,8 @@ fi
 : "${WP_ADMIN_PASSWORD:?WP_ADMIN_PASSWORD is required}"
 : "${WP_USER2_PASSWORD:?WP_USER2_PASSWORD is required}"
 
-WP_ADMIN_PASSWORD_VALUE="$WP_ADMIN_PASSWORD"
-WP_USER2_PASSWORD_VALUE="$WP_USER2_PASSWORD"
-
 mkdir -p "$WP_PATH"
 cd "$WP_PATH"
-
-if ! command -v wp >/dev/null 2>&1; then
-  curl -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-  chmod +x /tmp/wp-cli.phar
-  mv /tmp/wp-cli.phar /usr/local/bin/wp
-fi
 
 if [ ! -f "$WP_PATH/wp-includes/version.php" ]; then
   wp core download --allow-root
@@ -44,7 +35,7 @@ if ! wp core is-installed --allow-root --path="$WP_PATH"; then
     --url="https://${DOMAIN_NAME}" \
     --title="Inception Site" \
     --admin_user="$WP_ADMIN_USER" \
-    --admin_password="$WP_ADMIN_PASSWORD_VALUE" \
+    --admin_password="$WP_ADMIN_PASSWORD" \
     --admin_email="$WP_ADMIN_EMAIL" \
     --skip-email \
     --allow-root \
@@ -52,7 +43,7 @@ if ! wp core is-installed --allow-root --path="$WP_PATH"; then
 
   wp user create \
     "$WP_USER2" "$WP_USER2_EMAIL" \
-    --user_pass="$WP_USER2_PASSWORD_VALUE" \
+    --user_pass="$WP_USER2_PASSWORD" \
     --role=subscriber \
     --allow-root \
     --path="$WP_PATH"
@@ -64,9 +55,11 @@ if [ -n "${REDIS_HOST:-}" ]; then
 fi
 
 # Fix permissions so PHP-FPM can write to wp-content
-find "$WP_PATH" -type f -exec chmod 644 {} \;
-find "$WP_PATH" -type d -exec chmod 755 {} \;
-chown -R www-data:www-data "$WP_PATH"
+WP_CONTENT="$WP_PATH/wp-content"
+mkdir -p "$WP_CONTENT"
+chown -R www-data:www-data "$WP_CONTENT"
+find "$WP_CONTENT" -type d -exec chmod 755 {} \;
+find "$WP_CONTENT" -type f -exec chmod 644 {} \;
 
 mkdir -p /run/php
 exec php-fpm8.2 -F

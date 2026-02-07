@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM alpine:3.22.3
 
 RUN apk add --no-cache redis \
  && mkdir -p /data \

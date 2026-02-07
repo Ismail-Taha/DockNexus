@@ -19,6 +19,10 @@
 - Remove containers and volumes: `make clean`
 - Full reset including data: `make reset`
 
+**WordPress Initialization**
+On first boot with an empty WordPress volume, the entrypoint downloads and installs
+WordPress using WP-CLI. Subsequent starts reuse the existing volume content.
+
 **Manage Containers and Volumes**
 - List services: `make ps`
 - Tail logs: `make logs`
