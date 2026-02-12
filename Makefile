@@ -2,7 +2,6 @@ COMPOSE_FILE := srcs/docker-compose.yml
 DATA_ROOT ?= $(HOME)/data
 WORDPRESS_DATA_DIR := $(DATA_ROOT)/wordpress
 MARIADB_DATA_DIR := $(DATA_ROOT)/mariadb
-# REDIS_DATA_DIR := $(DATA_ROOT)/redis
 
 .PHONY: up down build clean reset ps logs ensure-dirs
 

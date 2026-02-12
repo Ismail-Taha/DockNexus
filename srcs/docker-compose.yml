@@ -135,13 +135,6 @@ volumes:
       type: none
       device: ${HOME}/data/wordpress
       o: bind
-  redis_data:
-    name: redis
-    driver: local
-    driver_opts:
-      type: none
-      device: ${HOME}/data/redis
-      o: bind
 
 secrets:
   db_password:
