@@ -15,8 +15,9 @@ fi
 mkdir -p "$WP_PATH"
 cd "$WP_PATH"
 
-if [ ! -f "$WP_PATH/wp-includes/version.php" ]; then
-  wp core download --allow-root
+if [ ! -f "$WP_PATH/wp-includes/version.php" ] || [ ! -f "$WP_PATH/wp-settings.php" ] || [ ! -f "$WP_PATH/index.php" ]; then
+  echo "WordPress core files missing/incomplete. Downloading core files..."
+  wp core download --allow-root --path="$WP_PATH" --force
 fi
 
 if [ ! -f "$WP_PATH/wp-config.php" ] && [ -f /usr/src/wp-config.php ]; then

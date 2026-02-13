@@ -529,6 +529,206 @@ Path: `srcs/requirements/bonus/cadvisor`
 - Exposes container resource metrics
 - Useful as justified "service of your choice"
 
+## 13.9 Service Scripts and Config Reference
+This section maps each service to the files that control build, startup, and runtime behavior.
+
+## 13.9.1 NGINX (`nginx`)
+Build file:
+- `srcs/requirements/nginx/Dockerfile`
+  - Installs `nginx`, `openssl`, `curl`
+  - Copies NGINX server config and startup script
+
+Startup script:
+- `srcs/requirements/nginx/tools/nginx-entrypoint.sh`
+  - Creates `/etc/nginx/certs` if needed
+  - Generates self-signed cert/key if absent
+  - Starts NGINX in foreground (`daemon off`)
+
+Runtime config:
+- `srcs/requirements/nginx/conf/nginx.conf`
+  - TLS listener on `443` (TLS 1.2/1.3)
+  - `location /` routes PHP traffic to `wordpress:9000`
+  - Reverse-proxy routes:
+    - `/adminer/` -> `adminer:8082`
+    - `/static/` -> `static:8081`
+    - `/cadvisor/` -> `cadvisor:8080`
+  - Uses `server_name ${DOMAIN_NAME}` token in config
+
+Compose keys:
+- `ports: "443:443"`
+- `volumes: wordpress_data:/var/www/html:ro`
+- `depends_on: wordpress, adminer, static, cadvisor`
+- `env_file: .env`
+
+## 13.9.2 WordPress (`wordpress`)
+Build file:
+- `srcs/requirements/wordpress/Dockerfile`
+  - Installs PHP-FPM + PHP extensions + MariaDB client
+  - Sets PHP-FPM listener to TCP `9000`
+  - Installs WP-CLI
+  - Copies WP config template + setup script
+
+Startup script:
+- `srcs/requirements/wordpress/tools/setup.sh`
+  - Reads DB password from Docker secret (`/run/secrets/db_password`)
+  - Ensures required env vars for admin and second user
+  - Ensures core files exist (re-downloads WordPress core if incomplete)
+  - Copies template `wp-config.php` if missing
+  - Waits for MariaDB readiness
+  - Runs `wp core install` and creates second user on first run
+  - Optionally installs/enables Redis cache plugin
+  - Fixes `wp-content` ownership/permissions
+  - Starts `php-fpm8.2` in foreground
+
+Runtime config:
+- `srcs/requirements/wordpress/conf/wp-config.php`
+  - DB constants from env (`MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`)
+  - `DB_HOST` set to `mariadb:3306`
+  - Site URL/home from `DOMAIN_NAME`
+  - Redis host support via `REDIS_HOST`
+  - Loads WordPress via `require_once ABSPATH . 'wp-settings.php'`
+
+Compose keys:
+- `volumes: wordpress_data:/var/www/html`
+- `secrets: db_password`
+- `depends_on: mariadb (service_healthy)`
+- `healthcheck`: MariaDB ping command from inside container
+- `env_file: .env`
+
+## 13.9.3 MariaDB (`mariadb`)
+Build file:
+- `srcs/requirements/mariadb/Dockerfile`
+  - Installs MariaDB server/client
+  - Copies custom config directory and entrypoint scripts
+
+Startup script:
+- `srcs/requirements/mariadb/tools/mariadb-entrypoint.sh`
+  - Reads `db_password` and `db_root_password` secrets
+  - Ensures DB env vars exist (`MYSQL_DATABASE`, `MYSQL_USER`)
+  - Prepares `/run/mysqld` and datadir ownership
+  - On first run:
+    - Initializes datadir
+    - Sets root password
+    - Creates application DB/user
+    - Grants privileges
+  - On later runs: skips bootstrap
+  - Starts `mariadbd` in foreground
+
+Runtime config:
+- `srcs/requirements/mariadb/conf/50-server.cnf`
+  - `bind-address=0.0.0.0`
+  - `port=3306`
+  - `datadir=/var/lib/mysql`
+  - socket path set to `/run/mysqld/mysqld.sock`
+
+Compose keys:
+- `volumes: mariadb_data:/var/lib/mysql`
+- `secrets: db_password, db_root_password`
+- `healthcheck`: local `mariadb-admin ping`
+- `env_file: .env`
+
+## 13.9.4 Redis (`redis`)
+Build file:
+- `srcs/requirements/bonus/redis/Dockerfile`
+  - Installs Redis on Alpine
+  - Prepares `/data` with redis ownership
+  - Starts Redis with AOF enabled (`--appendonly yes`)
+
+Startup script:
+- No custom script; uses Dockerfile `ENTRYPOINT` directly.
+
+Runtime config:
+- No custom redis config file currently (`conf/` contains placeholder `.gitkeep`).
+
+Compose keys:
+- Attached to internal `inception` network
+- Consumed by WordPress via `REDIS_HOST`
+
+## 13.9.5 FTP (`ftp`)
+Build file:
+- `srcs/requirements/bonus/ftp/Dockerfile`
+  - Installs `vsftpd`
+  - Copies FTP config and startup script
+
+Startup script:
+- `srcs/requirements/bonus/ftp/tools/ftp-entrypoint.sh`
+  - Creates FTP user from env (`FTP_USER`, `FTP_PASSWORD`) if missing
+  - Sets password
+  - Starts `vsftpd` in foreground using custom config
+
+Runtime config:
+- `srcs/requirements/bonus/ftp/conf/vsftpd.conf`
+  - Local user login enabled
+  - Write access enabled
+  - Chroot enabled
+  - Passive mode enabled on `21000-21010`
+  - FTP root set to `/var/www/html` (shared WordPress volume)
+
+Compose keys:
+- `ports: "21:21", "21000-21010:21000-21010"`
+- `volumes: wordpress_data:/var/www/html`
+- `depends_on: wordpress`
+- `environment`: `FTP_USER`, `FTP_PASSWORD`
+
+## 13.9.6 Adminer (`adminer`)
+Build file:
+- `srcs/requirements/bonus/adminer/Dockerfile`
+  - Installs PHP runtime packages
+  - Downloads latest Adminer PHP file to `/var/www/html/index.php`
+  - Serves it with PHP built-in server on `8082`
+
+Startup script:
+- No custom startup script (uses Dockerfile `ENTRYPOINT` command).
+
+Runtime config:
+- No active custom config file yet (`conf/` and `tools/` contain `.gitkeep` placeholders).
+
+Compose keys:
+- Internal-only service (not host-published)
+- Reached via NGINX route `/adminer/`
+
+## 13.9.7 Static (`static`)
+Build file:
+- `srcs/requirements/bonus/static/Dockerfile`
+  - Installs NGINX
+  - Copies static site config and HTML content
+
+Startup script:
+- No custom script; runs `nginx -g 'daemon off;'`.
+
+Runtime config:
+- `srcs/requirements/bonus/static/conf/nginx.conf`
+  - Listens on `8081`
+  - Serves `/var/www/html/index.html`
+- `srcs/requirements/bonus/static/conf/index.html`
+  - Static page content served by the service
+
+Compose keys:
+- Internal-only service
+- Reached via NGINX route `/static/`
+
+## 13.9.8 cAdvisor (`cadvisor`)
+Build file:
+- `srcs/requirements/bonus/cadvisor/Dockerfile`
+  - Downloads cAdvisor binary (`v0.54.1`)
+  - Runs cAdvisor on port `8080` with `--url_base_prefix=/cadvisor`
+
+Startup script:
+- No custom script; Dockerfile `ENTRYPOINT` launches cAdvisor directly.
+
+Runtime config:
+- No separate config file; runtime options are passed as CLI flags in `ENTRYPOINT`.
+
+Compose keys:
+- `privileged: true`
+- Host mounts for metrics collection:
+  - `/:/rootfs`
+  - `/var/run:/var/run`
+  - `/sys:/sys`
+  - `/var/lib/docker:/var/lib/docker`
+  - `/dev/disk:/dev/disk`
+- Reached via NGINX route `/cadvisor/`
+
 ---
 
 ## 14) Must-Know Interview Topics and Ready Answers
