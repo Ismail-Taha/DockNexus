@@ -20,20 +20,21 @@ chown -R mysql:mysql "$DATA_DIR"
 if [ ! -d "$DATA_DIR/mysql" ]; then
     echo "Initializing MariaDB data directory..."
     mariadb-install-db --user=mysql --datadir="$DATA_DIR"
+else
+    echo "Existing database detected."
+fi
 
-    echo "Bootstrapping database and users..."
-    mariadbd --user=mysql --datadir="$DATA_DIR" --socket="$SOCKET" --bootstrap <<EOF
+echo "Ensuring database, users, and grants..."
+mariadbd --user=mysql --datadir="$DATA_DIR" --socket="$SOCKET" --bootstrap <<EOF
 FLUSH PRIVILEGES;
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
 CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+ALTER USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
 FLUSH PRIVILEGES;
 EOF
-    echo "Bootstrap complete."
-else
-    echo "Existing database detected; skipping bootstrap."
-fi
+echo "Database/user reconciliation complete."
 
 echo "Starting MariaDB in foreground..."
 exec mariadbd --user=mysql --datadir="$DATA_DIR" --socket="$SOCKET" --console

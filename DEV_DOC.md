@@ -12,6 +12,13 @@
    - `secrets/db_root_password.txt`
 3. Ensure data directories exist at `/home/<login>/data` (handled by `make up`).
 
+**How Docker Secrets Work**
+- `srcs/docker-compose.yml` maps host secret files into Docker-managed secrets.
+- Services only receive secrets they explicitly request under each service `secrets:` block.
+- Inside containers, secrets are mounted as read-only files in `/run/secrets/`.
+- `wordpress` reads `/run/secrets/db_password` in `srcs/requirements/wordpress/tools/setup.sh`.
+- `mariadb` reads `/run/secrets/db_password` and `/run/secrets/db_root_password` in `srcs/requirements/mariadb/tools/mariadb-entrypoint.sh`.
+
 **Build and Launch**
 - Build and start: `make up`
 - Rebuild without cache: `make build`
@@ -37,4 +44,4 @@ WordPress using WP-CLI. Subsequent starts reuse the existing volume content.
 
 **Notes**
 - Database passwords are read from Docker secrets inside the containers.
-- If database credentials change, remove the MariaDB volume and reinitialize with `make reset`.
+- If secret values change, recreate affected services (for example `mariadb` and `wordpress`) so they read the new files.

@@ -29,7 +29,7 @@ Project sources reviewed for implementation proof:
 - `diagrams/*.mmd`
 
 Status snapshot date:
-- February 11, 2026
+- February 14, 2026
 
 ---
 
@@ -394,8 +394,33 @@ Compose can load env values from:
 Runtime container env is the merge output with precedence rules.
 
 ## 9.6 Compose Secrets in This Project
-Secrets are mounted as files under `/run/secrets/<name>` inside relevant containers.
-This is used for DB password injection.
+Compose defines two secrets:
+- `db_password` -> `../secrets/db_password.txt`
+- `db_root_password` -> `../secrets/db_root_password.txt`
+
+Service-level attachment:
+- `wordpress` receives `db_password`
+- `mariadb` receives `db_password` and `db_root_password`
+- services that do not declare a secret cannot access it
+
+Runtime model:
+1. Compose reads secret source files from host at deployment time.
+2. Docker mounts each declared secret into the container as a read-only file:
+   - `/run/secrets/db_password`
+   - `/run/secrets/db_root_password`
+3. Entrypoint scripts read these files and load shell variables used by app/database commands.
+
+How your stack uses them:
+- `wordpress` (`setup.sh`) reads `/run/secrets/db_password` to test DB connectivity and run WP bootstrap.
+- `mariadb` (`mariadb-entrypoint.sh`) reads both secrets to reconcile root/app credentials and grants.
+
+Why this is better than plain env vars:
+- file-based injection avoids exposing passwords as standard runtime env keys by default
+- secret scope is explicit per service
+- easier to audit because secret usage is centralized in Compose + entrypoint scripts
+
+Operational note:
+- if secret files change, recreate affected containers so new values are remounted.
 
 ## 9.7 Compose Idempotency
 Repeated `docker compose up -d`:
@@ -591,8 +616,8 @@ Runtime config:
 Compose keys:
 - `volumes: wordpress_data:/var/www/html`
 - `secrets: db_password`
-- `depends_on: mariadb (service_healthy)`
-- `healthcheck`: MariaDB ping command from inside container
+- `depends_on: mariadb` (start order only)
+- No Compose `healthcheck` currently configured (DB readiness handled by `setup.sh` retry loop)
 - `env_file: .env`
 
 ## 13.9.3 MariaDB (`mariadb`)
@@ -606,12 +631,12 @@ Startup script:
   - Reads `db_password` and `db_root_password` secrets
   - Ensures DB env vars exist (`MYSQL_DATABASE`, `MYSQL_USER`)
   - Prepares `/run/mysqld` and datadir ownership
-  - On first run:
-    - Initializes datadir
-    - Sets root password
-    - Creates application DB/user
-    - Grants privileges
-  - On later runs: skips bootstrap
+  - On first run: initializes datadir
+  - On every run (idempotent reconciliation):
+    - Sets/updates root password
+    - Ensures application DB exists
+    - Ensures app user exists with current password
+    - Reapplies grants
   - Starts `mariadbd` in foreground
 
 Runtime config:
@@ -624,8 +649,8 @@ Runtime config:
 Compose keys:
 - `volumes: mariadb_data:/var/lib/mysql`
 - `secrets: db_password, db_root_password`
-- `healthcheck`: local `mariadb-admin ping`
-- `env_file: .env`
+- `environment: MYSQL_DATABASE, MYSQL_USER` (non-sensitive identifiers only)
+- No Compose `healthcheck` currently configured
 
 ## 13.9.4 Redis (`redis`)
 Build file:

@@ -98,14 +98,7 @@ services:
     env_file:
       - .env
     depends_on:
-      mariadb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h mariadb -u$${MYSQL_USER} -p$$(cat /run/secrets/db_password) --silent || exit 1"]
-      interval: 1m30s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
+      - mariadb
 
   mariadb:
     container_name: mariadb
@@ -119,16 +112,9 @@ services:
       - db_root_password
     networks:
       - inception
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$$(cat /run/secrets/db_password) --silent || exit 1"]
-      interval: 1m30s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
-
-
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
 networks:
   inception:
     name: inception

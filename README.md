@@ -21,6 +21,16 @@ Docker containers share the host kernel and start quickly, which is ideal for li
 **Comparison: Secrets vs Environment Variables**
 Environment variables are easy to inject but can leak via process inspection or logs. Docker secrets are mounted as files and reduce exposure. This project uses secrets for database credentials and env vars for non-sensitive configuration.
 
+**How Docker Secrets Work in This Project**
+1. Secret values are stored on the host in:
+   - `secrets/db_password.txt`
+   - `secrets/db_root_password.txt`
+2. Compose defines these files in the top-level `secrets:` block in `srcs/docker-compose.yml`.
+3. Each service explicitly opts in via its `secrets:` list (for example `wordpress` gets `db_password`, `mariadb` gets both).
+4. At runtime, Docker mounts each enabled secret as a read-only file in `/run/secrets/<secret_name>`.
+5. Entrypoint scripts read these files (for example `cat /run/secrets/db_password`) and pass values to MariaDB/WordPress setup commands.
+6. Secrets are not automatically exposed as process environment variables; they are file-based and only available to containers that declare them.
+
 **Comparison: Docker Network vs Host Network**
 A Docker network provides isolated service-to-service communication without exposing internal ports on the host. Host networking removes isolation and is forbidden by the subject. This project uses a dedicated bridge network.
 
