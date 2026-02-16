@@ -1,6 +1,14 @@
-FROM alpine:3.22.3
+FROM debian:bookworm-slim
 
-RUN apk add --no-cache php82 php82-session php82-pdo_mysql curl \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        php \
+        php-cli \
+        php-mysql \
+        curl \
+        tini \
+    && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/www/html \
     && curl -fsSL https://www.adminer.org/latest.php -o /var/www/html/index.php
 
@@ -8,4 +16,4 @@ WORKDIR /var/www/html
 
 EXPOSE 8082
 
-ENTRYPOINT ["php82", "-S", "0.0.0.0:8082"]
+ENTRYPOINT ["/usr/bin/tini", "--", "php", "-S", "0.0.0.0:8082"]

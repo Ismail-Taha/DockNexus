@@ -1,15 +1,15 @@
 <?php
-define('DB_NAME', getenv('MYSQL_DATABASE'));
-define('DB_USER', getenv('MYSQL_USER'));
-define('DB_PASSWORD', getenv('MYSQL_PASSWORD'));
+define('DB_NAME', '__DB_NAME__');
+define('DB_USER', '__DB_USER__');
+define('DB_PASSWORD', '__DB_PASSWORD__');
 define('DB_HOST', 'mariadb:3306');
 
-define('WP_HOME', 'https://' . getenv('DOMAIN_NAME'));
-define('WP_SITEURL', 'https://' . getenv('DOMAIN_NAME'));
+define('WP_HOME', 'https://__DOMAIN_NAME__');
+define('WP_SITEURL', 'https://__DOMAIN_NAME__');
 
 define('FS_METHOD', 'direct');
 
-define('WP_REDIS_HOST', getenv('REDIS_HOST'));
+define('WP_REDIS_HOST', '__REDIS_HOST__');
 define('WP_REDIS_PORT', 6379);
 
 define('AUTH_KEY',         'cUu: (,;+%T+ Z:-Sx8|;XVNI[${3gB8$65YO0Sx.oCw@T#L)+]p=ccJZax^ngX-');

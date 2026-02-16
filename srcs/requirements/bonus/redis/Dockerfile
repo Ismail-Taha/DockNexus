@@ -1,6 +1,6 @@
-FROM alpine:3.22.3
+FROM debian:bookworm
 
-RUN apk add --no-cache redis \
+RUN apt-get update && apt-get install -y redis \
  && mkdir -p /data \
  && chown redis:redis /data
 

@@ -7,9 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY tools/ /usr/local/bin/
-
 COPY conf/ /etc/mysql/mariadb.conf.d/
-
 RUN chmod +x /usr/local/bin/*.sh
 
 EXPOSE 3306

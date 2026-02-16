@@ -3,7 +3,7 @@
 **Compose Basics**
 - Start: `docker compose --project-directory srcs -f srcs/docker-compose.yml up -d --build`
 - Stop: `docker compose --project-directory srcs -f srcs/docker-compose.yml down`
-- Rebuild images: `docker compose --project-directory srcs -f srcs/docker-compose.yml build --no-cache`
+- Rebuild images: `docker compose --project-directory srcs -f srcs/docker-compose.yml build`
 - Remove volumes: `docker compose --project-directory srcs -f srcs/docker-compose.yml down --volumes --remove-orphans`
 
 **Service Status and Logs**

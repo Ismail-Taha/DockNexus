@@ -1,6 +1,6 @@
-FROM alpine:3.22.3
+FROM debian:bookworm
 
-RUN apk add --no-cache nginx && mkdir -p /var/www/html
+RUN apt-get update && apt-get install -y nginx && mkdir -p /var/www/html
 
 COPY conf/nginx.conf /etc/nginx/nginx.conf
 COPY conf/index.html /var/www/html/index.html

@@ -15,7 +15,7 @@ down: ## Stop containers without removing volumes
 	docker compose --project-directory srcs -f $(COMPOSE_FILE) down
 
 build: ## Rebuild images without using cache
-	docker compose --project-directory srcs -f $(COMPOSE_FILE) build --no-cache
+	docker compose --project-directory srcs -f $(COMPOSE_FILE) build
 
 clean: ## Remove containers, networks, and named volumes
 	docker compose --project-directory srcs -f $(COMPOSE_FILE) down --volumes --remove-orphans
