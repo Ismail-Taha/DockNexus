@@ -9,7 +9,7 @@ define('WP_SITEURL', 'https://' . getenv('DOMAIN_NAME'));
 
 define('FS_METHOD', 'direct');
 
-define('WP_REDIS_HOST', getenv('REDIS_HOST') ?: 'redis');
+define('WP_REDIS_HOST', getenv('REDIS_HOST'));
 define('WP_REDIS_PORT', 6379);
 
 define('AUTH_KEY',         'cUu: (,;+%T+ Z:-Sx8|;XVNI[${3gB8$65YO0Sx.oCw@T#L)+]p=ccJZax^ngX-');
