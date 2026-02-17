@@ -12,4 +12,4 @@ RUN wget -qO /usr/local/bin/cadvisor \
 
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/cadvisor", "--port=8080"]
+ENTRYPOINT ["/usr/local/bin/cadvisor", "--port=8080", "--url_base_prefix=/cadvisor"]
